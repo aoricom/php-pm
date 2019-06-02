@@ -217,6 +217,10 @@ class ProcessManager
      */
     protected $pidfile;
 
+
+
+    protected $debugIgnorePrefix = [];
+
     /**
      * Controller port
      */
@@ -810,6 +814,12 @@ class ProcessManager
             $knownFiles = array_keys($this->filesLastMTime);
             $recentlyIncludedFiles = array_diff($data['files'], $knownFiles);
             foreach ($recentlyIncludedFiles as $filePath) {
+                foreach ($this->getDebugIgnorePrefix() as $prefix){
+                    if(strpos($filePath, $prefix) === 0){
+                        continue;
+                    }
+                }
+
                 if (file_exists($filePath)) {
                     $this->filesLastMTime[$filePath] = filemtime($filePath);
                     $this->filesLastMd5[$filePath] = md5_file($filePath, true);
@@ -1175,7 +1185,7 @@ class ProcessManager
             'debug' => $this->isDebug(),
             'logging' => $this->isLogging(),
             'static-directory' => $this->getStaticDirectory(),
-            'populate-server-var' => $this->isPopulateServer()
+            'populate-server-var' => $this->isPopulateServer(),
         ];
 
         $config = var_export($config, true);
@@ -1274,4 +1284,21 @@ EOF;
             posix_kill($pid, SIGKILL); // make sure it's really dead
         }
     }
+
+    /**
+     * @return array
+     */
+    public function getDebugIgnorePrefix(): array
+    {
+        return $this->debugIgnorePrefix;
+    }
+
+    /**
+     * @param array $debugIgnorePrefix
+     */
+    public function setDebugIgnorePrefix(array $debugIgnorePrefix): void
+    {
+        $this->debugIgnorePrefix = $debugIgnorePrefix;
+    }
+
 }

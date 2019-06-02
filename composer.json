@@ -1,5 +1,5 @@
 {
-    "name": "php-pm/php-pm",
+    "name": "aoricom/php-pm",
     "description": "PHP-PM is a process manager, supercharger and load balancer for PHP applications.",
     "license": "MIT",
     "require": {
@@ -38,5 +38,8 @@
     },
     "bin": [
         "bin/ppm"
-    ]
+    ],
+  "replace": {
+    "php-pm/php-pm": "self.version"
+  }
 }

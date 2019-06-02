@@ -34,6 +34,7 @@ trait ConfigTrait
             ->addOption('socket-path', null, InputOption::VALUE_REQUIRED, 'Path to a folder where socket files will be placed. Relative to working-directory or cwd()', '.ppm/run/')
             ->addOption('pidfile', null, InputOption::VALUE_REQUIRED, 'Path to a file where the pid of the master process is going to be stored', '.ppm/ppm.pid')
             ->addOption('reload-timeout', null, InputOption::VALUE_REQUIRED, 'The number of seconds to wait before force closing a worker during a reload, or -1 to disable. Default: 30', 30)
+            ->addOption('debug-watch-ignore-prefixes', null, InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY, 'List of ignored prefixes for watcher', [])
             ->addOption('config', 'c', InputOption::VALUE_REQUIRED, 'Path to config file', '');
     }
 
@@ -42,6 +43,9 @@ trait ConfigTrait
         $table = new Table($output);
 
         $rows = array_map(function ($a, $b) {
+            if (is_array($b)) {
+                $b = implode(',', $b);
+            }
             return [$a, $b];
         }, array_keys($config), $config);
         $table->addRows($rows);
@@ -51,7 +55,7 @@ trait ConfigTrait
 
     /**
      * @param InputInterface $input
-     * @param bool $create
+     * @param bool           $create
      * @return string
      * @throws \Exception
      */
@@ -85,33 +89,34 @@ trait ConfigTrait
 
         if ($path = $this->getConfigPath($input)) {
             $content = file_get_contents($path);
-            $config = json_decode($content, true);
+            $config  = json_decode($content, true);
         }
 
-        $config['bridge'] = $this->optionOrConfigValue($input, 'bridge', $config);
-        $config['host'] = $this->optionOrConfigValue($input, 'host', $config);
-        $config['port'] = (int)$this->optionOrConfigValue($input, 'port', $config);
-        $config['workers'] = (int)$this->optionOrConfigValue($input, 'workers', $config);
-        $config['app-env'] = $this->optionOrConfigValue($input, 'app-env', $config);
-        $config['debug'] = $this->optionOrConfigValue($input, 'debug', $config);
-        $config['logging'] = $this->optionOrConfigValue($input, 'logging', $config);
-        $config['static-directory'] = $this->optionOrConfigValue($input, 'static-directory', $config);
-        $config['bootstrap'] = $this->optionOrConfigValue($input, 'bootstrap', $config);
-        $config['max-requests'] = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
-        $config['max-execution-time'] = (int)$this->optionOrConfigValue($input, 'max-execution-time', $config);
-        $config['memory-limit'] = (int)$this->optionOrConfigValue($input, 'memory-limit', $config);
-        $config['ttl'] = (int)$this->optionOrConfigValue($input, 'ttl', $config);
-        $config['populate-server-var'] = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
-        $config['socket-path'] = $this->optionOrConfigValue($input, 'socket-path', $config);
-        $config['pidfile'] = $this->optionOrConfigValue($input, 'pidfile', $config);
-        $config['reload-timeout'] = $this->optionOrConfigValue($input, 'reload-timeout', $config);
+        $config['bridge']                      = $this->optionOrConfigValue($input, 'bridge', $config);
+        $config['host']                        = $this->optionOrConfigValue($input, 'host', $config);
+        $config['port']                        = (int)$this->optionOrConfigValue($input, 'port', $config);
+        $config['workers']                     = (int)$this->optionOrConfigValue($input, 'workers', $config);
+        $config['app-env']                     = $this->optionOrConfigValue($input, 'app-env', $config);
+        $config['debug']                       = $this->optionOrConfigValue($input, 'debug', $config);
+        $config['logging']                     = $this->optionOrConfigValue($input, 'logging', $config);
+        $config['static-directory']            = $this->optionOrConfigValue($input, 'static-directory', $config);
+        $config['bootstrap']                   = $this->optionOrConfigValue($input, 'bootstrap', $config);
+        $config['max-requests']                = (int)$this->optionOrConfigValue($input, 'max-requests', $config);
+        $config['max-execution-time']          = (int)$this->optionOrConfigValue($input, 'max-execution-time', $config);
+        $config['memory-limit']                = (int)$this->optionOrConfigValue($input, 'memory-limit', $config);
+        $config['ttl']                         = (int)$this->optionOrConfigValue($input, 'ttl', $config);
+        $config['populate-server-var']         = (boolean)$this->optionOrConfigValue($input, 'populate-server-var', $config);
+        $config['socket-path']                 = $this->optionOrConfigValue($input, 'socket-path', $config);
+        $config['pidfile']                     = $this->optionOrConfigValue($input, 'pidfile', $config);
+        $config['reload-timeout']              = $this->optionOrConfigValue($input, 'reload-timeout', $config);
+        $config['debug-watch-ignore-prefixes'] = $this->optionOrConfigValue($input, 'debug-watch-ignore-prefixes', $config);
 
         $config['cgi-path'] = $this->optionOrConfigValue($input, 'cgi-path', $config);
 
         if (false === $config['cgi-path']) {
             //not set in config nor in command options -> autodetect path
             $executableFinder = new PhpExecutableFinder();
-            $binary = $executableFinder->find();
+            $binary           = $executableFinder->find();
 
             $cgiPaths = [
                 $binary . '-cgi', //php7.0 -> php7.0-cgi
@@ -145,9 +150,9 @@ trait ConfigTrait
     }
 
     /**
-     * @param InputInterface $input
+     * @param InputInterface  $input
      * @param OutputInterface $output
-     * @param bool $render
+     * @param bool            $render
      * @return array|mixed
      */
     protected function initializeConfig(InputInterface $input, OutputInterface $output, $render = true)
@@ -158,7 +163,7 @@ trait ConfigTrait
         $config = $this->loadConfig($input, $output);
 
         if ($path = $this->getConfigPath($input)) {
-            $modified = '';
+            $modified   = '';
             $fileConfig = json_decode(file_get_contents($path), true);
             if (json_encode($fileConfig) !== json_encode($config)) {
                 $modified = ', modified by command arguments';
